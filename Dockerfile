@@ -14,8 +14,7 @@ RUN mkdir -p /langtool/models/ngrams /langtool/models/fasttext /langtool/src /wo
 WORKDIR  /langtool/models/ngrams
 
 # We could do something like wget -r --accept-regex="ngrams-[a-z]{2}-.*\.zip" https://languagetool.org/download/ngram-data/
-# However, different layers with smaller sizes are needed to build this with github actions.
-# See Dockerfile.alpine and Dockerfile.alpine
+# see Dockerfile.alpine
 
 RUN wget --tries=10 https://languagetool.org/download/ngram-data/ngrams-en-20150817.zip
 RUN unzip "ngrams-en-20150817.zip" && rm -rf "ngrams-en-20150817.zip"
