@@ -1,0 +1,55 @@
+FROM debian:bookworm as build 
+
+RUN apt update && apt upgrade -y
+RUN apt install bash curl wget coreutils unzip -y
+
+RUN mkdir -p /langtool/models/ngrams /langtool/models/fasttext /langtool/src /langtool/models/ngrams/downloads
+
+WORKDIR  /langtool/models/ngrams/downloads
+
+# COPY . . # Uncomment this line if you want to copy downloaded models (zip files for ngrams, bin for fasttext) from pwd, and then comment wget lines
+
+# Delete second wget line to no download untested ngrams
+RUN echo "Downloading Models..." && \
+    wget -r --regex-type=pcre --accept-regex="ngrams-[a-z]{2}-.*\.zip" https://languagetool.org/download/ngram-data/ && \
+    wget -r --regex-type=pcre --accept-regex="ngram-[a-z]{2}-.*\.zip" https://languagetool.org/download/ngram-data/untested
+
+
+RUN for i in $(find . -type f -name "*.zip"); do mv "$i" "/langtool/models/ngrams/$(basename $i)"; done
+
+
+WORKDIR /langtool/models/ngrams
+RUN rm -rf /langtool/models/ngrams/downloads
+RUN for i in $(find . -type f -name "*.zip"); do unzip "$i" && rm "$i"; done
+
+
+WORKDIR /langtool/models/fasttext
+RUN wget https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin 
+
+
+WORKDIR  /langtool/src
+RUN curl -L https://raw.githubusercontent.com/languagetool-org/languagetool/master/install.sh | bash
+
+RUN mv $(dirname $(find . -type f -name "languagetool-commandline.jar")) "/langtool/dist"
+RUN cd / && rm -rf /langtool/src
+
+
+FROM alpine:3.21.3
+RUN apk update --no-cache && \
+    apk add --no-cache \
+        fasttext \
+        libc6-compat \
+        libstdc++ \
+        openjdk21-jre-headless
+
+
+RUN addgroup -S langtool && \
+    adduser -S langtool -G langtool 
+    
+COPY --chown=langtool --from=build /langtool /langtool
+
+USER langtool
+
+ENTRYPOINT ["java", "-jar", "/langtool/dist/languagetool-commandline.jar", "--fasttextbinary", "/usr/bin/fasttext", "--fasttextmodel", "/langtool/models/fasttext/lid.176.bin", "--languagemodel", "/langtool/models/ngrams"]
+
+WORKDIR /workspace
