@@ -34,7 +34,7 @@ RUN mv $(dirname $(find . -type f -name "languagetool-commandline.jar")) "/langt
 RUN cd / && rm -rf /langtool/src
 
 
-FROM alpine:3.21.3
+FROM alpine:3.22.0
 RUN apk update --no-cache && \
     apk add --no-cache \
         fasttext \
